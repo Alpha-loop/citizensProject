@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "860990849692",
+    "project_id": "faith-connect-82bdd",
+    "storage_bucket": "faith-connect-82bdd.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:860990849692:android:fbfa0229f450b15d1aa359",
+        "android_client_info": {
+          "package_name": "com.faithconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4IDCzd0RNXvZTiACTGbDV1LkVpyxFwNM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
