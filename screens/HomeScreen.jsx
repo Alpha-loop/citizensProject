@@ -16,6 +16,7 @@ import UpcomingEvent from './event/UpcomingEvent';
 import dateFormatter from '../utils/dateFormatter';
 import { churchYoutubeMedia } from '../redux/userSlice';
 import { LikePost } from '../services/social';
+import Video from 'react-native-video';
 
 
 const TrendingMessages = ({ navigation, data, videoDetails }) => {
@@ -31,6 +32,36 @@ const TrendingMessages = ({ navigation, data, videoDetails }) => {
         </TouchableOpacity>
     )
 }
+
+const MediaRenderer = ({ mediaUrl, type, style}) => {
+    if (!mediaUrl) return null;
+
+    if (type === 'Video') {
+        return (
+            <Video
+                source={{ uri: mediaUrl }}
+                style={[styles.media, style]}
+                resizeMode="contain"
+                controls={true}
+                paused={false}
+            />
+        )
+    }
+
+    if (type === 'Picture') {
+        return (
+            <AutoHeightImage
+                width={width - 30}
+                source={{ uri: mediaUrl }}
+                style={style}
+            />
+        );
+    }
+
+    return null;
+}
+
+
 
 export const FeedsCard = ({ isLoadingFeeds, churchFeeds, navigation, scrollUp, userInfo, setChurchFeeds }) => {
     const [displayAuthModal, setDisplayAuthModal] = useState(false)
@@ -92,7 +123,11 @@ export const FeedsCard = ({ isLoadingFeeds, churchFeeds, navigation, scrollUp, u
                             </View>
                             {
                                 item.mediaUrl ? (
-                                    <AutoHeightImage width={width - 30} source={{ uri: item.mediaUrl }} />
+                                    <MediaRenderer
+                                        mediaUrl={item.mediaUrl}
+                                        type={item.type}
+                                        style={{ marginBottom: 10 }}
+                                    />
                                 ) : null
                             }
                             <View style={{ marginTop: 10 }}>
@@ -188,8 +223,8 @@ const Celebrants = ({ data, allCelebrants }) => {
 const InviteModal = ({ inviteModal, setInviteModal, displayQRCode, youTubeId }) => {
     const inviteToFaithConnect = async () => {
         await Share.share({
-            title: "Invite to Faith Connect",
-            message: 'Invite your family and friends to use Faith Connect to seamlessly connect with your favorite Church services.' + '\n\n' + 'https://play.google.com/store/apps/details?id=com.faithconnect',
+            title: "Invite to The Citizens Church",
+            message: 'Invite your family and friends to use The Citizens Chuch to seamlessly connect with your favorite Church services.' + '\n\n' + 'https://play.google.com/store/apps/details?id=com.faithconnect',
             url: 'https://play.google.com/store/apps/details?id=com.faithconnect'
         });
     }
@@ -569,6 +604,8 @@ export const HomeScreen = ({ navigation }) => {
             setIsLoadingFeeds(false)
             setChurchFeeds(data)
             const devotionObj = data && data.find(i => i.postCategoryName.toLowerCase().includes("devotional"));
+
+            console.log('This is devotion object', devotionObj)
             if (devotionObj) {
                 setDevotional(devotionObj)
             } else {
@@ -950,5 +987,10 @@ const styles = StyleSheet.create({
     },
     backgroundVideo: {
         height: 200,
-    }
+    },
+    media: {
+        width: '100%',
+        height: 200, // Adjust as needed
+        backgroundColor: '#000',
+    },
 })

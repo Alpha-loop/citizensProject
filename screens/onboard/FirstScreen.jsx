@@ -26,7 +26,7 @@ const FirstScreen = ({ navigation }) => {
                         <Text style={{ fontFamily: Fonts.black, fontSize: 28, textAlign: 'center', color: COLORS.white }}>with your Church Family</Text>
                     </View>
                     <View style={{ width: '70%', alignSelf: 'center', marginVertical: 20 }}>
-                        <Text style={{ fontFamily: Fonts.light, fontSize: 14, textAlign: 'center', color: COLORS.white }}>Churchplus Connects you with People and Contents that matter to your spiritual growth</Text>
+                        <Text style={{ fontFamily: Fonts.light, fontSize: 14, textAlign: 'center', color: COLORS.white }}>The Citizens Church connects you with People and Contents that matter to your spiritual growth</Text>
                     </View>
                     <View style={{ width: '20%', alignSelf: 'center', marginBottom: 20, flexDirection: 'row', justifyContent: 'space-around' }}>
                         <View style={{ height: 12, width: 12, backgroundColor: '#65B5FF', borderRadius: 8 }}></View>

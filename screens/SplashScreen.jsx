@@ -10,7 +10,7 @@ import { setUserAuthToken } from '../backendapi/index';
 import { useIsFocused } from "@react-navigation/native";
 import usePushNotification from '../utils/usePushNotification';
 
-const logo = require("../assets/img/splash.jpg");
+const logo = require("../assets/img/TCC_logo.png");
 
 const SplashScreen = ({ navigation }) => {
     const dispatch = useDispatch();
@@ -106,7 +106,17 @@ const SplashScreen = ({ navigation }) => {
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
             <View style={{ alignItems: 'center', height: '100%' }}>
-                <Image source={logo} style={{ position: 'absolute', top: '20%' }} />
+                <Image 
+                    source={logo} 
+                    style={{ 
+                        position: 'absolute', 
+                        top: '20%',
+                        width: '80%',
+                        height: undefined,
+                        aspectRatio: 1 
+                    }} 
+                    resizeMode="contain"
+                />
                 <ActivityIndicator size="large" color={COLORS.primary} style={{ position: 'absolute', bottom: '20%' }} />
             </View>
 

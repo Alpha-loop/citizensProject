@@ -101,7 +101,7 @@ const LoginScreen = ({ navigation }) => {
                 <View style={{ marginTop: 20 }}>
                     {/* <Icon name={'account-circle'} size={68} style={{ textAlign: 'center' }} /> */}
                     <View style={{ flexDirection: "row", justifyContent: "center", marginBottom: 20 }}>
-                        <Image source={require("../../assets/img/splash.jpg")} resizeMode='contain' style={{ height: 150 }} />
+                        <Image source={require("../../assets/img/TCC_logo.png")} resizeMode='contain' style={{ height: 150, width: 150 }} />
                     </View>
 
                     <View style={styles.formControl}>
