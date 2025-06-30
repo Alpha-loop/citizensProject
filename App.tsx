@@ -15,8 +15,8 @@ import { navigationRef } from './utils/navigationRef';
 
 const createNotificationChannels = async () => {
   await Notifee.createChannel({
-    id: 'faithconnect',
-    name: 'FaithConnect',
+    id: 'TCC',
+    name: 'TCC',
     importance: AndroidImportance.HIGH,
     vibration: true,
   });

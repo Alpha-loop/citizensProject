@@ -1,4 +1,4 @@
-import { StyleSheet, Text, Image, View, Linking, FlatList, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Share } from 'react-native'
+import { StyleSheet, Text, Image, View, Linking, FlatList, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Share, Dimensions } from 'react-native'
 import React, { useState, useEffect, useRef } from 'react'
 import { Like, Unlike } from '../assets/img/like'
 import { Comment } from '../assets/img/comment'
@@ -18,7 +18,6 @@ import { churchYoutubeMedia } from '../redux/userSlice';
 import { LikePost } from '../services/social';
 import Video from 'react-native-video';
 
-
 const TrendingMessages = ({ navigation, data, videoDetails }) => {
     return (
         <TouchableOpacity onPress={() => navigation.navigate("ViewVideoDetails", { data, videoDetails })}>
@@ -33,19 +32,32 @@ const TrendingMessages = ({ navigation, data, videoDetails }) => {
     )
 }
 
-const MediaRenderer = ({ mediaUrl, type, style}) => {
+const MediaRenderer = ({ mediaUrl, type, style, shouldPlay = false }) => {
+    const videoRef = useRef(null);
+    
+    useEffect(() => {
+        if (!videoRef.current) return; 
+
+        if (shouldPlay) {
+            videoRef.current.seek(0);
+        }
+    }, [shouldPlay]);
+
     if (!mediaUrl) return null;
 
     if (type === 'Video') {
         return (
             <Video
+                ref={videoRef}
                 source={{ uri: mediaUrl }}
                 style={[styles.media, style]}
                 resizeMode="contain"
                 controls={true}
-                paused={false}
+                paused={!shouldPlay}
+                repeat={true}
+                onError={(error) => console.log('Video error:', error)}
             />
-        )
+        );
     }
 
     if (type === 'Picture') {
@@ -59,15 +71,92 @@ const MediaRenderer = ({ mediaUrl, type, style}) => {
     }
 
     return null;
+};
+
+const FeedItem = ({ item, index, viewFeedsDetails, likeFeed, isVisible }) => {
+    return (
+        <View style={[styles.eventCard, { marginTop: index !== 0 ? 20 : 0 }]} key={index} >
+            <View style={{ paddingTop: 20, paddingLeft: 15, paddingRight: 15, paddingBottom: 8, flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: "rgba(0, 0, 0, 0.60)", fontFamily: Fonts.bold, fontSize: 13 }}>{item.postCategoryName}</Text>
+                <Text style={{ color: "rgba(0, 0, 0, 0.60)", fontFamily: Fonts.semibold, fontSize: 13 }}>{dateFormatter.relativeDate(item._OrderDate)}</Text>
+            </View>
+            {
+                item.mediaUrl ? (
+                    <MediaRenderer
+                        mediaUrl={item.mediaUrl}
+                        type={item.type}
+                        style={{ marginBottom: 10 }}
+                        shouldPlay={isVisible && item.type === 'Video'}
+                    />
+                ) : null
+            }
+            <View style={{ marginTop: 10 }}>
+                <TouchableOpacity onPress={() => viewFeedsDetails(item)}>
+                    <Text style={{ color: "rgba(0, 0, 0, 0.80)", fontFamily: Fonts.bold, fontSize: 16, paddingLeft: 15, paddingRight: 15 }}>{item.title}</Text>
+                    <Text style={{ color: "rgba(0, 0, 0, 0.50)", paddingLeft: 15, paddingRight: 15, marginTop: 5, lineHeight: 20, fontFamily: Fonts.regular }}>{item.content && item.content.length > 250 ? item.content.slice(0, 250) : item.content}
+                        {
+                            item?.content?.length > 250 ? (
+                                <Text style={{ color: 'rgba(18, 65, 145, 1)', fontStyle: 'italic' }}>...Read more</Text>
+                            ) : null
+                        }
+                    </Text>
+                </TouchableOpacity>
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, paddingBottom: 20 }}>
+                    <>
+                        <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: 15, paddingRight: 15 }}>
+                            {
+                                item.isLiked ? (
+                                    <TouchableOpacity onPress={() => likeFeed(item, index)}>
+                                        <View style={{ marginRight: 3 }}>
+                                            <Like />
+                                        </View>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity onPress={() => likeFeed(item, index)}>
+                                        <View style={{ marginRight: 3 }}>
+                                            <Unlike />
+                                        </View>
+                                    </TouchableOpacity>
+                                )
+                            }
+                            <Text style={{ color: "#000", fontSize: 15, fontFamily: Fonts.semibold }}>{item.likeCount}</Text>
+                        </View>
+                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                            <View style={{ marginRight: 3 }}>
+                                <Comment />
+                            </View>
+                            <Text style={{ color: "#000", fontSize: 15, fontFamily: Fonts.semibold }}>{item.comments.length}</Text>
+                        </View>
+                    </>
+                </View>
+            </View>
+        </View>
+    );
 }
 
-
-
 export const FeedsCard = ({ isLoadingFeeds, churchFeeds, navigation, scrollUp, userInfo, setChurchFeeds }) => {
-    const [displayAuthModal, setDisplayAuthModal] = useState(false)
+    const [displayAuthModal, setDisplayAuthModal] = useState(false);
+    const [currentVisibleVideo, setCurrentVisibleVideo] = useState(null);
+
+
+    const viewabilityConfig = useRef({
+        itemVisiblePercentThreshold: 50, // Require 70% visibility
+        minimumViewTime: 300, // Only needs to be visible for 100ms
+    }).current;
+
+    const handleViewableItemsChanged = useRef(({ viewableItems }) => {
+        if (viewableItems.length > 0) {
+            const visibleItem = viewableItems[0].item;
+            if (visibleItem.type === 'Video') {
+                setCurrentVisibleVideo(visibleItem.postId);
+            }
+        } else {
+            setCurrentVisibleVideo(null);
+        }
+    }).current;
 
     const viewFeedsDetails = (item) => {
-        navigation.navigate("FeedsDetail", { id: item.postId })
+        navigation.navigate("FeedsDetail", { id: item.postId });
         if (scrollUp) {
             scrollUp();
         }
@@ -78,7 +167,6 @@ export const FeedsCard = ({ isLoadingFeeds, churchFeeds, navigation, scrollUp, u
             setDisplayAuthModal(true);
             return;
         }
-        // Add code to like or unlike feed below
         let payload = {
             mobileUserID: userInfo.userId,
             postId: item.postId
@@ -106,72 +194,33 @@ export const FeedsCard = ({ isLoadingFeeds, churchFeeds, navigation, scrollUp, u
             console.log(error)
         }
     }
+
+    const renderItem = ({ item, index }) => (
+        <FeedItem 
+            item={item}
+            index={index}
+            viewFeedsDetails={viewFeedsDetails}
+            likeFeed={likeFeed}
+            isVisible={currentVisibleVideo === item.postId}
+        />
+    );
+
     return (
         <View>
-
             {
                 isLoadingFeeds ? (
                     <View style={{ flexDirection: "row", justifyContent: "center" }}>
                         <ActivityIndicator size="large" color={COLORS.primary} style={{ position: 'absolute', bottom: '20%' }} />
                     </View>
                 ) : churchFeeds && churchFeeds.length > 0 ? (
-                    churchFeeds?.map((item, index) => (
-                        <View style={[styles.eventCard, { marginTop: index !== 0 ? 20 : 0 }]} key={index} >
-                            <View style={{ paddingTop: 20, paddingLeft: 15, paddingRight: 15, paddingBottom: 8, flexDirection: "row", justifyContent: "space-between" }}>
-                                <Text style={{ color: "rgba(0, 0, 0, 0.60)", fontFamily: Fonts.bold, fontSize: 13 }}>{item.postCategoryName}</Text>
-                                <Text style={{ color: "rgba(0, 0, 0, 0.60)", fontFamily: Fonts.semibold, fontSize: 13 }}>{dateFormatter.relativeDate(item._OrderDate)}</Text>
-                            </View>
-                            {
-                                item.mediaUrl ? (
-                                    <MediaRenderer
-                                        mediaUrl={item.mediaUrl}
-                                        type={item.type}
-                                        style={{ marginBottom: 10 }}
-                                    />
-                                ) : null
-                            }
-                            <View style={{ marginTop: 10 }}>
-                                <TouchableOpacity onPress={() => viewFeedsDetails(item)}>
-                                    <Text style={{ color: "rgba(0, 0, 0, 0.80)", fontFamily: Fonts.bold, fontSize: 16, paddingLeft: 15, paddingRight: 15 }}>{item.title}</Text>
-                                    <Text style={{ color: "rgba(0, 0, 0, 0.50)", paddingLeft: 15, paddingRight: 15, marginTop: 5, lineHeight: 20, fontFamily: Fonts.regular }}>{item.content && item.content.length > 250 ? item.content.slice(0, 250) : item.content}
-                                        {
-                                            item?.content?.length > 250 ? (
-                                                <Text style={{ color: 'rgba(18, 65, 145, 1)', fontStyle: 'italic' }}>...Read more</Text>
-                                            ) : null
-                                        }
-                                    </Text>
-                                </TouchableOpacity>
-                                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, paddingBottom: 20 }}>
-                                    <>
-                                        <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: 15, paddingRight: 15 }}>
-                                            {
-                                                item.isLiked ? (
-                                                    <TouchableOpacity onPress={() => likeFeed(item, index)}>
-                                                        <View style={{ marginRight: 3 }}>
-                                                            <Like />
-                                                        </View>
-                                                    </TouchableOpacity>
-                                                ) : (
-                                                    <TouchableOpacity onPress={() => likeFeed(item, index)}>
-                                                        <View style={{ marginRight: 3 }}>
-                                                            <Unlike />
-                                                        </View>
-                                                    </TouchableOpacity>
-                                                )
-                                            }
-                                            <Text style={{ color: "#000", fontSize: 15, fontFamily: Fonts.semibold }}>{item.likeCount}</Text>
-                                        </View>
-                                        <View style={{ flexDirection: "row", alignItems: "center" }}>
-                                            <View style={{ marginRight: 3 }}>
-                                                <Comment />
-                                            </View>
-                                            <Text style={{ color: "#000", fontSize: 15, fontFamily: Fonts.semibold }}>{item.comments.length}</Text>
-                                        </View>
-                                    </>
-                                </View>
-                            </View>
-                        </View>
-                    ))
+                    <FlatList
+                        data={churchFeeds}
+                        renderItem={renderItem}
+                        keyExtractor={(item, index) => index.toString()}
+                        onViewableItemsChanged={handleViewableItemsChanged}
+                        viewabilityConfig={viewabilityConfig}
+                        scrollEnabled={false}
+                    />
                 ) : (
                     <View style={{ backgroundColor: "#F4F4F4", height: 325, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingBottom: 60, borderRadius: 10 }}>
                         <Image source={require("../assets/img/NoFeeds.png")} />
@@ -180,8 +229,6 @@ export const FeedsCard = ({ isLoadingFeeds, churchFeeds, navigation, scrollUp, u
             }
             <SwipeModal visible={displayAuthModal} closeModal={() => setDisplayAuthModal(false)} height="20%">
                 <View style={{ alignItems: "center", height: "100%" }}>
-                    {/* <Image source={require("../assets/img/splash.jpg")} style={{ width: 50 }} /> */}
-                    {/* <Text style={{ fontFamily: Fonts.bold, color: "rgba(0, 0, 0, 0.9)", marginBottom: 5 }}>Log into your account to interact with the app </Text> */}
                     <View style={{ flexDirection: "row", gap: 10 }}>
                         <Button icon="login" mode="contained" buttonColor={COLORS.primary} textColor="#FFFFFF" style={{ width: (width / 2) - 30 }} onPress={() => navigation.navigate("Login")}>
                             Login
@@ -277,14 +324,6 @@ const InviteModal = ({ inviteModal, setInviteModal, displayQRCode, youTubeId }) 
                             </View>
                         ) : null
                     }
-                    {/* <View style={{ backgroundColor: COLORS.white, flexDirection: "row", gap: 10, alignItems: "center", paddingHorizontal: 13, paddingVertical: 15, marginTop: 15, borderRadius: 8 }}>
-                        <ShareIconII />
-                        <View>
-                            <Text style={{ fontFamily: Fonts.bold, color: "rgba(0, 0, 0, 0.8)" }}>Share Message Catalogue</Text>
-                            <Text style={{ color: "rgba(0, 0, 0, 0.8)", fontSize: 11 }}>Send a Link to your Friends and Family to enjoy</Text>
-                            <Text style={{ color: "rgba(0, 0, 0, 0.8)", fontSize: 11 }}>series of Messages from your Church</Text>
-                        </View>
-                    </View> */}
                 </View>
             </View>
         </SwipeModal>
@@ -554,9 +593,7 @@ const MinistryInfo = ({ ministryInformation, setMinistryInformation, fullProfile
 
 export const HomeScreen = ({ navigation }) => {
     const churchInfo = useSelector((state) => state.user.churchInfo);
-    // console.log(churchInfo, 'churchInfo')
     const userInfo = useSelector((state) => state.user.userInfo);
-    // console.log(userInfo, 'userInfo')
     const dispatch = useDispatch()
     const [churchFeeds, setChurchFeeds] = useState([]);
     const [isLoadingFeeds, setIsLoadingFeeds] = useState(false);
@@ -569,7 +606,8 @@ export const HomeScreen = ({ navigation }) => {
     const [scanQR, setScanQR] = useState(false)
     const [ministryInformation, setMinistryInformation] = useState(false)
     const [refreshing, setRefreshing] = useState(false);
-
+    
+    const scrollViewRef = useRef();
     const FirstQuickActions = [
         'Invite',
         'Next Steps',
@@ -600,12 +638,9 @@ export const HomeScreen = ({ navigation }) => {
                 return;
             }
             let { data } = response;
-            console.log(data, 'church feeds data')
             setIsLoadingFeeds(false)
             setChurchFeeds(data)
             const devotionObj = data && data.find(i => i.postCategoryName.toLowerCase().includes("devotional"));
-
-            console.log('This is devotion object', devotionObj)
             if (devotionObj) {
                 setDevotional(devotionObj)
             } else {
@@ -622,14 +657,10 @@ export const HomeScreen = ({ navigation }) => {
         try {
             let { data } = await ChurchProfile(churchInfo.tenantId);
             if (!data) return;
-
-            // console.log(data.returnObject.invitePublicPageQRCode, 'full profile data')
-            
             setFullProfile(data.returnObject)
             const channelId = data.returnObject.churchSocialMedia.find(i => i.name.toLowerCase().includes("channel id"));
             if (!channelId) setVideoDetails([])
             getVideoIds(channelId.url);
-
         } catch (error) {
             console.log(error);
         }
@@ -680,17 +711,13 @@ export const HomeScreen = ({ navigation }) => {
     }
 
     const [playing, setPlaying] = useState(false);
-
-
     const [celebrants, setCelebrants] = useState([]);
     const getCelebrants = async () => {
-        // setIsLoadingYoutube(true)
         try {
             let { data } = await GetAllCelebrants(churchInfo.tenantId);
             setCelebrants(data)
         } catch (error) {
             console.log(error);
-            // setIsLoadingYoutube(false)
         }
     }
 
@@ -732,7 +759,7 @@ export const HomeScreen = ({ navigation }) => {
         getCelebrants();
         setTimeout(() => {
             setRefreshing(false);
-        }, 2000); // Simulating a delay
+        }, 2000);
     };
 
     const setDisplayQRCode = () => {
@@ -742,13 +769,26 @@ export const HomeScreen = ({ navigation }) => {
         }, 1000)
     }
 
+    const scrollUp = () => {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    };
+
     return (
         <>
-            <ScrollView style={{ flex: 1, backgroundColor: "#F4F4F4", }} refreshControl={
-                <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                />}>
+            <ScrollView 
+                ref={scrollViewRef}
+                style={{ flex: 1, backgroundColor: "#F4F4F4" }}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                    />
+                }
+                decelerationRate="fast"
+                snapToAlignment="center"
+                snapToInterval={Dimensions.get('window').height * 0.7}
+                disableIntervalMomentum={true}
+            >
                 <SafeAreaView>
                     <View style={[styles.sideContainer, { paddingBottom: 10 }]}>
                         <View style={styles.devotionalContainer}>
@@ -778,8 +818,6 @@ export const HomeScreen = ({ navigation }) => {
                                 contentContainerStyle={{ columnGap: 7 }}
                                 horizontal
                                 showsHorizontalScrollIndicator={false}
-                            // style={{ marginTop: 10 }}
-
                             />
                         </View>
                         {
@@ -812,7 +850,13 @@ export const HomeScreen = ({ navigation }) => {
                                 </View>
                             ) : churchFeeds && churchFeeds?.length > 0 ? (
                                 <View style={{ marginTop: 20 }}>
-                                    <FeedsCard isLoadingFeeds={isLoadingFeeds} churchFeeds={[churchFeeds[0]]} navigation={navigation} userInfo={userInfo} />
+                                    <FeedsCard 
+                                        isLoadingFeeds={isLoadingFeeds} 
+                                        churchFeeds={[churchFeeds[0]]} 
+                                        navigation={navigation} 
+                                        userInfo={userInfo} 
+                                        scrollUp={scrollUp}
+                                    />
                                 </View>
                             ) : null
                         }
@@ -909,7 +953,14 @@ export const HomeScreen = ({ navigation }) => {
                         ) : null
                     }
                     <View style={[styles.sideContainer, { marginTop: 0 }]}>
-                        <FeedsCard isLoadingFeeds={isLoadingFeeds} churchFeeds={churchFeeds} setChurchFeeds={setChurchFeeds} navigation={navigation} userInfo={userInfo} />
+                        <FeedsCard 
+                            isLoadingFeeds={isLoadingFeeds} 
+                            churchFeeds={churchFeeds} 
+                            setChurchFeeds={setChurchFeeds} 
+                            navigation={navigation} 
+                            userInfo={userInfo}
+                            scrollUp={scrollUp}
+                        />
                     </View>
                     {/* Modals  */}
                     <InviteModal inviteModal={inviteModal} setInviteModal={() => setInviteModal(false)} displayQRCode={setDisplayQRCode} youTubeId={videoDetails[0]?.videoId} />
@@ -919,11 +970,6 @@ export const HomeScreen = ({ navigation }) => {
                     <MinistryInfo ministryInformation={ministryInformation} setMinistryInformation={() => setMinistryInformation(false)} fullProfile={fullProfile} />
                 </SafeAreaView>
             </ScrollView>
-            {/* <View style={styles.fabIcon}>
-                <TouchableOpacity onPress={() => navigation.navigate("FeedsDetail")}>
-                    <Image source={require("../assets/img/fabIcon.png")} />
-                </TouchableOpacity>
-            </View> */}
         </>
     )
 }
@@ -938,28 +984,16 @@ const styles = StyleSheet.create({
     devotionalContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        // borderWidth: 2,
-        // borderColor: 'red',
         marginTop: 5
     },
-    // devotionalFirstChild: {
-    //     flexDirection: "row",
-    //     // alignItems: "center",
-    // },
     hero_img: {
         borderRadius: 5,
         borderWidth: 3,
         borderColor: "rgba(0, 0, 0, 0.60)",
         width: "100%"
     },
-    // bold_headers: {
-    //     fontFamily: "Inter-Bold",
-    //     fontSize: 18,
-    //     fontWeight: "bold"
-    // },
     todayscelebrant: {
         marginTop: 10,
-
         backgroundColor: "rgba(217, 217, 217, 0.20)",
         paddingTop: 20,
         paddingBottom: 20,
@@ -975,10 +1009,8 @@ const styles = StyleSheet.create({
     },
     eventCard: {
         borderRadius: 10,
-        // borderWidth: 1,
-        // borderColor: "rgba(0, 0, 0, 0.10)",
         backgroundColor: "white",
-        // marginTop: 20
+        marginBottom: 20,
     },
     fabIcon: {
         position: "absolute",
@@ -990,7 +1022,7 @@ const styles = StyleSheet.create({
     },
     media: {
         width: '100%',
-        height: 200, // Adjust as needed
+        height: 200,
         backgroundColor: '#000',
     },
 })
