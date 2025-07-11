@@ -25,7 +25,7 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
-target 'faithConnect' do
+target 'theCitizensChurch' do
   pod 'FirebaseCore', :modular_headers => true
   pod 'GoogleUtilities', :modular_headers => true;
   config = use_native_modules!
@@ -41,7 +41,7 @@ target 'faithConnect' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  target 'faithConnectTests' do
+  target 'theCitizensChurchTests' do
     inherit! :complete
     # Pods for testing
     pod 'RNInAppBrowser', :path => '../node_modules/react-native-inappbrowser-reborn'
